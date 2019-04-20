@@ -168,12 +168,12 @@ def train():
 
 
   #store results after training:
-  path = "../torch_results/"
+  path = "../cnn_results/"
   print("saving results in folder...")
-  np.save(path + "torch_loss_train", loss_train)
-  np.save(path + "torch_accuracy_train", acc_train)
-  np.save(path + "torch_loss_test", loss_test)
-  np.save(path + "torch_accuracy_test", acc_test) 
+  np.save(path + "cnn_loss_train", loss_train)
+  np.save(path + "cnn_accuracy_train", acc_train)
+  np.save(path + "cnn_loss_test", loss_test)
+  np.save(path + "cnn_accuracy_test", acc_test) 
 
 
   print("saving model in folder")
