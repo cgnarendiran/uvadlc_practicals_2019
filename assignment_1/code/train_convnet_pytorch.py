@@ -32,7 +32,7 @@ FLAGS = None
 dtype = torch.FloatTensor
 
 #use GPUs if available
-device =  torch.device('cpu') #  torch.device('cuda' if torch.cuda.is_available() else 'cpu') #
+device =  torch.device('cuda') #  torch.device('cuda' if torch.cuda.is_available() else 'cpu') #
 
 
 def accuracy(predictions, targets):
@@ -94,7 +94,7 @@ def train():
   # define the model
   convnet_model = ConvNet(x_test.shape[1], y_test.shape[1])
   loss_fn = nn.CrossEntropyLoss()
-  optmizer = optim.Adam(cnn_model.parameters(), lr=FLAGS.lr)
+  optmizer = torch.optim.Adam(cnn_model.parameters(), lr=FLAGS.lr)
 
   cnn_model.to(device)
   
@@ -143,6 +143,7 @@ def train():
 
     loss.backward()
     optimizer.step()
+    y_pred.detach()
 
     # Evaluate accuracies and losses:
     if (step%FLAGS.eval_freq==0)  or step==FLAGS.max_steps-1:
@@ -162,9 +163,9 @@ def train():
       
       #
       if len(loss_train)> 10:
-          if (np.mean(loss_train[-10:-5]) - np.mean(loss_train[-5:])) < 1e-7:
-              print("Early Stopping")
-              break  
+        if (np.mean(loss_train[-10:-5]) - np.mean(loss_train[-5:])) < 1e-7:
+          print("Early Stopping")
+          break  
 
 
   #store results after training:
@@ -177,7 +178,7 @@ def train():
 
 
   print("saving model in folder")
-  np.save(path+"convnet_torch_model", convnet_model)
+  torch.save(convnet_model.state_dict(), convnet_model.__class__.__name__ + ".pt")
   return
 
 
