@@ -34,13 +34,14 @@ class CustomBatchNormAutograd(nn.Module):
     """
     super(CustomBatchNormAutograd, self).__init__()
 
-    self.eps = eps
-    self.n_neurons = n_neurons
+    
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    self.gamma = nn.Parameter(torch.randn(self.n_neurons))
-    self.beta = nn.Parameter(torch.randn(self.n_neurons))
+    self.eps = eps
+    self.n_neurons = n_neurons
+    self.gamma = nn.Parameter(torch.ones(self.n_neurons, dtype=torch.float),requires_grad=True)
+    self.beta = nn.Parameter(torch.ones(self.n_neurons, dtype=torch.float), requires_grad=True)
 
     ########################
     # END OF YOUR CODE    #
@@ -64,14 +65,14 @@ class CustomBatchNormAutograd(nn.Module):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    try:
-      input.shape[0] == self.n_neurons
-    except:
+    if(input.shape[1] != self.n_neurons):
       raise ValueError("Input dimensions don't match the Initialized Parameter dimensions")
-      
+
     mu = input.mean(dim=0)
-    var =  ((input - mu)**2).mean(dim=0) 
-    out = (input - mu)/(var+self.eps).sqrt()
+    var =  input.var(dim=0, unbiased = False) 
+    xcap = (input - mu)/((var+self.eps).sqrt())
+    out = self.gamma*xcap + self.beta
+
     ########################
     # END OF YOUR CODE    #
     #######################
@@ -125,7 +126,15 @@ class CustomBatchNormManualFunction(torch.autograd.Function):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    
+    ctx.constant = eps
+    mu = input.mean(dim=0)
+    var =  input.var(dim=0, unbiased = False) 
+    xcap = (input - mu)/((var+eps).sqrt())
+
+    ctx.save_for_backward(input, gamma, beta, var, xcap)
+    # ctx.needs_input_grad = [True, True, True, False, False]
+    out = gamma*xcap + beta
     ########################
     # END OF YOUR CODE    #
     #######################
@@ -153,7 +162,25 @@ class CustomBatchNormManualFunction(torch.autograd.Function):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    input, gamma, beta, var, xcap = ctx.saved_variables
+    eps = ctx.constant
+    grad_input = grad_gamma = grad_beta = None
+
+    
+    if ctx.needs_input_grad[1]:
+      grad_gamma = (grad_output*xcap).sum(0)
+    else:
+      grad_gamma = None
+
+    if ctx.needs_input_grad[2]:
+      grad_beta = grad_output.sum(0)
+    else:
+      grad_beta = None
+
+    if ctx.needs_input_grad[0]:
+      grad_input = (gamma/input.shape[0]) * (1/((var+eps).sqrt())) * (input.shape[0]*grad_output - grad_beta - xcap*grad_gamma)
+    else:
+      grad_input = None
     ########################
     # END OF YOUR CODE    #
     #######################
@@ -191,7 +218,10 @@ class CustomBatchNormManualModule(nn.Module):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    self.n_neurons = n_neurons
+    self.eps = eps
+    self.gamma = nn.Parameter(torch.ones(self.n_neurons, dtype=torch.float))
+    self.beta = nn.Parameter(torch.zeros(self.n_neurons, dtype=torch.float))
     ########################
     # END OF YOUR CODE    #
     #######################
@@ -214,7 +244,11 @@ class CustomBatchNormManualModule(nn.Module):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    if(input.shape[1] != self.n_neurons):
+      raise ValueError("Input dimensions don't match the Initialized Parameter dimensions")
+
+    func = CustomBatchNormManualFunction()
+    out = func.apply(input, self.gamma, self.beta, self.eps)
     ########################
     # END OF YOUR CODE    #
     #######################
