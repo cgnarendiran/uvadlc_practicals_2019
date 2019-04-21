@@ -15,10 +15,10 @@ import torchvision
 
 
 # Default constants
-DNN_HIDDEN_UNITS_DEFAULT = '200' #100
-LEARNING_RATE_DEFAULT = 2e-4 #2e-3
+DNN_HIDDEN_UNITS_DEFAULT = '500,200,200,200' #100
+LEARNING_RATE_DEFAULT = 8e-4 #2e-3
 MAX_STEPS_DEFAULT = 3000 #1500
-BATCH_SIZE_DEFAULT = 200 #200 
+BATCH_SIZE_DEFAULT = 300 #200 
 EVAL_FREQ_DEFAULT = 100 #100
 
 # Directory in which cifar data is saved
@@ -129,7 +129,7 @@ def train():
   # define the model
   mlp_model = MLP(x_test.shape[1], dnn_hidden_units, 10)
   loss_fn = nn.CrossEntropyLoss()
-  optimizer = torch.optim.SGD(mlp_model.parameters(), lr=FLAGS.learning_rate)
+  optimizer = torch.optim.Adam(mlp_model.parameters(), lr=FLAGS.learning_rate, weight_decay=0.001)
   # optimizer.zero_grad()
 
   #metrics to keep track during training.
@@ -163,14 +163,14 @@ def train():
     y = y.argmax(dim=1)
     ###################################
 
+    # zero the parameter gradients
+    optimizer.zero_grad()
+
     # forward + backward + optimize
     y_pred = mlp_model.forward(x)
     # print(y_pred[:])
     # print(y[:])
     loss = loss_fn(y_pred, y)
-
-    # zero the parameter gradients
-    optimizer.zero_grad()
 
 
     loss.backward()
@@ -193,10 +193,10 @@ def train():
       print("test performance: acc = ", acc_test[-1], "loss = ",loss_test[-1])
       
       #
-      if len(loss_train)> 10:
-          if (np.mean(loss_train[-10:-5]) - np.mean(loss_train[-5:])) < 1e-7:
-              print("Early Stopping")
-              break  
+      # if len(loss_train)> 10:
+      #     if (np.mean(loss_train[-10:-5]) - np.mean(loss_train[-5:])) < 1e-7:
+      #         print("Early Stopping")
+      #         break  
 
 
   #store results after training:
