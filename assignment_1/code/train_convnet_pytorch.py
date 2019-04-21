@@ -94,9 +94,9 @@ def train():
   # define the model
   convnet_model = ConvNet(x_test.shape[1], y_test.shape[1])
   loss_fn = nn.CrossEntropyLoss()
-  optmizer = torch.optim.Adam(cnn_model.parameters(), lr=FLAGS.lr)
+  optimizer = torch.optim.Adam(convnet_model.parameters(), lr=FLAGS.learning_rate)
 
-  cnn_model.to(device)
+  convnet_model.to(device)
   
   #reshape y for torch suitability
   y_test = y_test.argmax(dim=1)
