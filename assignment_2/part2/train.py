@@ -71,14 +71,16 @@ def train(config):
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda:0" if use_cuda else "cpu")
 
+    #path to save the model
+    path = "results/"
     
     # Initialize the dataset and data loader (note the +1)
     dataset = TextDataset(config.txt_file, config.seq_length)
-    print("Data file:", dataset._data[0:5])
+    # print("Data file:", dataset._data[0:5])
     data_loader = DataLoader(dataset, config.batch_size, num_workers=1)
 
     # Initialize the model that we are going to use
-    model = TextGenerationModel(config.batch_size, config.seq_length, dataset._vocab_size, 
+    model = TextGenerationModel(config.batch_size, config.seq_length, dataset, 
         config.lstm_num_hidden, config.lstm_num_layers, device) 
 
     # Setup the loss and optimizer
@@ -86,8 +88,8 @@ def train(config):
     optimizer = torch.optim.RMSprop(model.parameters(), lr = config.learning_rate)
 
     # Store Accuracy and losses:
-    train_acc = []
-    
+    results = {'accuracy': [], 'loss': []}
+
     # Training:
     total_steps = 0
     while total_steps <= config.train_steps:
@@ -96,6 +98,7 @@ def train(config):
 
             # Only for time measurement of step through network
             t1 = time.time()
+            optimizer.zero_grad()
 
             # Stacking and One-hot encoding:
             batch_inputs = torch.stack(batch_inputs,dim=1).to(device)
@@ -103,7 +106,7 @@ def train(config):
             # print("Inputs and targets:", x_onehot.size(), batch_targets.size())
 
             # forward inputs to the model:
-            pred_targets = model.forward(index_to_onehot(batch_inputs, dataset.vocab_size))
+            pred_targets, _ = model.forward(index_to_onehot(batch_inputs, dataset.vocab_size))
             # print("pred_targets trans shape:", pred_targets.transpose(2,1).size())
             loss = criterion(pred_targets.transpose(2,1), batch_targets)
 
@@ -113,7 +116,11 @@ def train(config):
 
             #Accuracy
             # argmax along the vocab dimension
-            train_acc.append( (pred_targets.argmax(dim=2) == batch_targets).float().mean().item() )
+            accuracy = (pred_targets.argmax(dim=2) == batch_targets).float().mean().item() 
+
+            #Update the accuracy and losses for visualization:
+            results['accuracy'].append(accuracy)
+            results['loss'].append(loss.item())
 
             # Just for time measurement
             t2 = time.time()
@@ -131,15 +138,24 @@ def train(config):
                 print("[{}] Train Step {:07d}/{:07d}, Batch Size = {}, "
                       "Accuracy = {:.2f}, Loss = {:.3f}".format(
                         datetime.now().strftime("%Y-%m-%d %H:%M"), step,
-                        config.train_steps, config.batch_size, train_acc[step], loss
+                        config.train_steps, config.batch_size, results['accuracy'][-1], results['loss'][-1]
                 ))
 
             if step%config.sample_every ==0:
                 # Generate some sentences by sampling from the model
-                sentence = generate_sentence(model, dataset, device)
-                print('GENERATED:')
-                print(sentence)
-                torch.save(model, config.txt_file + str(step) + "_model.pt")
+                print('GENERATED NO TEMP:')
+                print(model.generate_sentence(100))
+                print('__________________')
+                print('GENERATED 0.5 TEMP:')
+                print(model.generate_sentence(100, 0.5))
+                print('__________________')
+                print('GENERATED 1 TEMP:')
+                print(model.generate_sentence(100, 1))
+                print('__________________')
+                print('GENERATED 2 TEMP:')
+                print(model.generate_sentence(100, 2))
+                # save model for individual timesteps
+                torch.save(model, path + config.txt_file.split('/')[1].split('.')[0] + str(step) + "_model.pt")
 
             if step == config.train_steps:
                 # If you receive a PyTorch data-loader error, check this bug report:
@@ -148,10 +164,12 @@ def train(config):
 
         print('Done training.')
         #Save the final model
-        torch.save(model, config.txt_file + "_final_model.pt")
-        np.save("train_acc", train_acc)
+        
+        torch.save(model, path + config.txt_file.split('/')[1].split('.')[0] + "_final_model.pt")
+        print("saving results in folder...")
+        np.save(path + "loss_train", results['loss'])
+        np.save(path + "accuracy_train", results['accuracy'])
 
-        temps = [0.01, 0.5, 1.0, 2.0, 10.0]
 
 
  ################################################################################
