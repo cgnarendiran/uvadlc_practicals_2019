@@ -8,4 +8,4 @@
 #SBATCH --partition=gpu_shared_course
 #SBATCH --gres=gpu:1
 
-srun python train.py --txt_file='assets/book_EN_grimms_fairy_tails.txt' --train_steps=100000
+srun python train.py --txt_file='assets/book_EN_grimms_fairy_tails.txt' --train_steps=100000 --learning_rate=0.001

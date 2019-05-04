@@ -80,8 +80,8 @@ def train(config):
     data_loader = DataLoader(dataset, config.batch_size, num_workers=1)
 
     # Initialize the model that we are going to use
-    model = TextGenerationModel(config.batch_size, config.seq_length, dataset, 
-        config.lstm_num_hidden, config.lstm_num_layers, device) 
+    model = TextGenerationModel(config.batch_size, config.seq_length, dataset, config.lstm_num_hidden, config.lstm_num_layers, device)
+    # model = torch.load("results/book_EN_grimms_fairy_tails_final_model.pt")
 
     # Setup the loss and optimizer
     criterion = torch.nn.CrossEntropyLoss()
@@ -138,7 +138,7 @@ def train(config):
                 print("[{}] Train Step {:07d}/{:07d}, Batch Size = {}, "
                       "Accuracy = {:.2f}, Loss = {:.3f}".format(
                         datetime.now().strftime("%Y-%m-%d %H:%M"), step,
-                        config.train_steps, config.batch_size, results['accuracy'][-1], results['loss'][-1]
+                        total_steps, config.batch_size, results['accuracy'][-1], results['loss'][-1]
                 ))
 
             if step%config.sample_every ==0:
