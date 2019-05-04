@@ -33,14 +33,14 @@ from model import TextGenerationModel
 
 ################################################################################
 
-def generate_sentence(model, dataset):
+def generate_sentence(model, dataset, device):
     start_char = np.random.randint(dataset.vocab_size)
     sentence = dataset._ix_to_char[start_char]
-    one_hot = torch.rand(1, 1, dataset.vocab_size)
+    one_hot = torch.rand(1, 1, dataset.vocab_size).to(device)
     one_hot[:, :, start_char] = 1   
 
     for i in range(config.seq_length - 1):
-        out = model.forward(one_hot).detach()
+        out = model.forward(one_hot)
         test = out.squeeze()
         # print("test:", test.size())
         test3 = torch.softmax(test, dim=0)
@@ -132,7 +132,7 @@ def train(config):
 
         if step%config.sample_every ==0:
             # Generate some sentences by sampling from the model
-            sentence = generate_sentence(model, dataset)
+            sentence = generate_sentence(model, dataset, device)
             print('GENERATED:')
             print(sentence)
             torch.save(model, config.txt_file + str(step) + "_model.pt")
