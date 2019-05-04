@@ -88,66 +88,70 @@ def train(config):
     # Store Accuracy and losses:
     train_acc = []
     
-    # Training: 
-    for step, (batch_inputs, batch_targets) in enumerate(data_loader):
+    # Training:
+    total_steps = 0
+    while total_steps <= config.train_steps:
 
-        # Only for time measurement of step through network
-        t1 = time.time()
+        for step, (batch_inputs, batch_targets) in enumerate(data_loader):
 
-        # Stacking and One-hot encoding:
-        batch_inputs = torch.stack(batch_inputs,dim=1).to(device)
-        batch_targets = torch.stack(batch_targets,dim=1).to(device)
-        # print("Inputs and targets:", x_onehot.size(), batch_targets.size())
+            # Only for time measurement of step through network
+            t1 = time.time()
 
-        # forward inputs to the model:
-        pred_targets = model.forward(index_to_onehot(batch_inputs, dataset.vocab_size))
-        # print("pred_targets trans shape:", pred_targets.transpose(2,1).size())
-        loss = criterion(pred_targets.transpose(2,1), batch_targets)
+            # Stacking and One-hot encoding:
+            batch_inputs = torch.stack(batch_inputs,dim=1).to(device)
+            batch_targets = torch.stack(batch_targets,dim=1).to(device)
+            # print("Inputs and targets:", x_onehot.size(), batch_targets.size())
 
-        #Backward pass
-        loss.backward(retain_graph =True)
-        optimizer.step()
+            # forward inputs to the model:
+            pred_targets = model.forward(index_to_onehot(batch_inputs, dataset.vocab_size))
+            # print("pred_targets trans shape:", pred_targets.transpose(2,1).size())
+            loss = criterion(pred_targets.transpose(2,1), batch_targets)
 
-        #Accuracy
-        # argmax along the vocab dimension
-        train_acc.append( (pred_targets.argmax(dim=2) == batch_targets).float().mean().item() )
+            #Backward pass
+            loss.backward(retain_graph =True)
+            optimizer.step()
 
-        # Just for time measurement
-        t2 = time.time()
-        # examples_per_second = config.batch_size/float(t2-t1)
+            #Accuracy
+            # argmax along the vocab dimension
+            train_acc.append( (pred_targets.argmax(dim=2) == batch_targets).float().mean().item() )
 
-        if step % config.print_every == 0:
+            # Just for time measurement
+            t2 = time.time()
+            # examples_per_second = config.batch_size/float(t2-t1)
+            total_steps += 1
 
-            # print("[{}] Train Step {:04d}/{:04d}, Batch Size = {}, Examples/Sec = {:.2f}, "
-            #       "Accuracy = {:.2f}, Loss = {:.3f}".format(
-            #         datetime.now().strftime("%Y-%m-%d %H:%M"), step,
-            #         config.train_steps, config.batch_size, examples_per_second,
-            #         accuracy, loss
-            # ))
-            print("[{}] Train Step {:06d}/{:06d}, Batch Size = {}, "
-                  "Accuracy = {:.2f}, Loss = {:.3f}".format(
-                    datetime.now().strftime("%Y-%m-%d %H:%M"), step,
-                    config.train_steps, config.batch_size, train_acc[step], loss
-            ))
+            if step % config.print_every == 0:
 
-        if step%config.sample_every ==0:
-            # Generate some sentences by sampling from the model
-            sentence = generate_sentence(model, dataset, device)
-            print('GENERATED:')
-            print(sentence)
-            torch.save(model, config.txt_file + str(step) + "_model.pt")
+                # print("[{}] Train Step {:04d}/{:04d}, Batch Size = {}, Examples/Sec = {:.2f}, "
+                #       "Accuracy = {:.2f}, Loss = {:.3f}".format(
+                #         datetime.now().strftime("%Y-%m-%d %H:%M"), step,
+                #         config.train_steps, config.batch_size, examples_per_second,
+                #         accuracy, loss
+                # ))
+                print("[{}] Train Step {:07d}/{:07d}, Batch Size = {}, "
+                      "Accuracy = {:.2f}, Loss = {:.3f}".format(
+                        datetime.now().strftime("%Y-%m-%d %H:%M"), step,
+                        config.train_steps, config.batch_size, train_acc[step], loss
+                ))
 
-        if step == config.train_steps:
-            # If you receive a PyTorch data-loader error, check this bug report:
-            # https://github.com/pytorch/pytorch/pull/9655
-            break
+            if step%config.sample_every ==0:
+                # Generate some sentences by sampling from the model
+                sentence = generate_sentence(model, dataset, device)
+                print('GENERATED:')
+                print(sentence)
+                torch.save(model, config.txt_file + str(step) + "_model.pt")
 
-    print('Done training.')
-    #Save the final model
-    torch.save(model, config.txt_file + "_final_model.pt")
-    np.save("train_acc", train_acc)
+            if step == config.train_steps:
+                # If you receive a PyTorch data-loader error, check this bug report:
+                # https://github.com/pytorch/pytorch/pull/9655
+                break
 
-    temps = [0.01, 0.5, 1.0, 2.0, 10.0]
+        print('Done training.')
+        #Save the final model
+        torch.save(model, config.txt_file + "_final_model.pt")
+        np.save("train_acc", train_acc)
+
+        temps = [0.01, 0.5, 1.0, 2.0, 10.0]
 
 
  ################################################################################
@@ -185,12 +189,12 @@ if __name__ == "__main__":
     parser.add_argument('--learning_rate_step', type=int, default=5000, help='Learning rate step')
     parser.add_argument('--dropout_keep_prob', type=float, default=1.0, help='Dropout keep probability')
 
-    parser.add_argument('--train_steps', type=int, default=1e6, help='Number of training steps')
+    parser.add_argument('--train_steps', type=int, default=1000000, help='Number of training steps')
     parser.add_argument('--max_norm', type=float, default=5.0, help='--')
 
     # Misc params
     parser.add_argument('--summary_path', type=str, default="./summaries/", help='Output path for summaries')
-    parser.add_argument('--print_every', type=int, default=10, help='How often to print training progress')
+    parser.add_argument('--print_every', type=int, default=50, help='How often to print training progress')
     parser.add_argument('--sample_every', type=int, default=100, help='How often to sample from the model')
 
     config = parser.parse_args()
