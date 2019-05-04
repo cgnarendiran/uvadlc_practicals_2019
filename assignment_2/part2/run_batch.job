@@ -1,0 +1,11 @@
+#!/bin/bash
+#SBATCH --job-name=cnn_cifar
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=3
+#SBATCH --ntasks-per-node=1
+#SBATCH --time=20:00:00
+#SBATCH --mem=60000M
+#SBATCH --partition=gpu_shared_course
+#SBATCH --gres=gpu:1
+
+srun python train.py --txt_file='assets/book_EN_grimms_fairy_tails.txt' --train_steps=100
